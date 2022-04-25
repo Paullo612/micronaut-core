@@ -15,11 +15,14 @@
  */
 package io.micronaut.inject.provider;
 
-import io.micronaut.context.*;
+import io.micronaut.context.BeanContext;
+import io.micronaut.context.BeanProvider;
+import io.micronaut.context.BeanResolutionContext;
+import io.micronaut.context.DefaultBeanContext;
+import io.micronaut.context.Qualifier;
 import io.micronaut.context.exceptions.NoSuchBeanException;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.Nullable;
 import io.micronaut.core.type.Argument;
 import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.qualifiers.AnyQualifier;
@@ -27,6 +30,7 @@ import io.micronaut.inject.qualifiers.Qualifiers;
 
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
@@ -58,26 +62,31 @@ public final class BeanProviderDefinition extends AbstractProviderDefinition<Bea
             @NonNull BeanResolutionContext resolutionContext,
             @NonNull BeanContext context,
             @NonNull Argument<Object> argument,
-            @Nullable Qualifier<Object> qualifier,
+            @NonNull Supplier<Qualifier<Object>> qualifierSupplier,
             boolean singleton) {
         return new BeanProvider<Object>() {
-            private final Qualifier<Object> finalQualifier =
-                    qualifier instanceof AnyQualifier ? null : qualifier;
+
+            private Qualifier<Object> getInjectionPointQualifier() {
+                final Qualifier<Object> qualifier = qualifierSupplier.get();
+
+                return qualifier instanceof AnyQualifier ? null : qualifier;
+            }
 
             @Override
             public Object get() {
-                return ((DefaultBeanContext) context).getBean(resolutionContext, argument, finalQualifier);
+                return ((DefaultBeanContext) context).getBean(resolutionContext, argument, getInjectionPointQualifier());
             }
 
             @Override
             public Optional<Object> find(Qualifier<Object> qualifier) {
+                final Qualifier<Object> injectionPointQualifier = getInjectionPointQualifier();
                 Qualifier<Object> actualQualifier;
-                if (finalQualifier == null) {
+                if (injectionPointQualifier == null) {
                     actualQualifier = qualifier;
                 } else if (qualifier == null) {
-                    actualQualifier = finalQualifier;
+                    actualQualifier = injectionPointQualifier;
                 } else {
-                    actualQualifier = Qualifiers.byQualifiers(finalQualifier, qualifier);
+                    actualQualifier = Qualifiers.byQualifiers(injectionPointQualifier, qualifier);
                 }
 
                 return ((DefaultBeanContext) context).findBean(resolutionContext, argument, actualQualifier);
@@ -85,7 +94,7 @@ public final class BeanProviderDefinition extends AbstractProviderDefinition<Bea
 
             @Override
             public BeanDefinition<Object> getDefinition() {
-                return context.getBeanDefinition(argument, finalQualifier);
+                return context.getBeanDefinition(argument, getInjectionPointQualifier());
             }
 
             @Override
@@ -96,7 +105,7 @@ public final class BeanProviderDefinition extends AbstractProviderDefinition<Bea
             @Override
             public boolean isUnique() {
                 try {
-                    return context.getBeanDefinitions(argument, finalQualifier).size() == 1;
+                    return context.getBeanDefinitions(argument, getInjectionPointQualifier()).size() == 1;
                 } catch (NoSuchBeanException e) {
                     return false;
                 }
@@ -104,18 +113,18 @@ public final class BeanProviderDefinition extends AbstractProviderDefinition<Bea
 
             @Override
             public boolean isPresent() {
-                return context.containsBean(argument, finalQualifier);
+                return context.containsBean(argument, getInjectionPointQualifier());
             }
 
             @NonNull
             @Override
             public Iterator<Object> iterator() {
-                return ((DefaultBeanContext) context).getBeansOfType(resolutionContext, argument, finalQualifier).iterator();
+                return ((DefaultBeanContext) context).getBeansOfType(resolutionContext, argument, getInjectionPointQualifier()).iterator();
             }
 
             @Override
             public Stream<Object> stream() {
-                return ((DefaultBeanContext) context).streamOfType(resolutionContext, argument, finalQualifier);
+                return ((DefaultBeanContext) context).streamOfType(resolutionContext, argument, getInjectionPointQualifier());
             }
         };
     }

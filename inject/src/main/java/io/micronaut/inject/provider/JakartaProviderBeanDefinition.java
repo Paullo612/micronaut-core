@@ -23,6 +23,8 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
 import jakarta.inject.Provider;
 
+import java.util.function.Supplier;
+
 /**
  * Implementation for Jakarta bean lookups.
  *
@@ -48,7 +50,12 @@ public final class JakartaProviderBeanDefinition extends AbstractProviderDefinit
     }
 
     @Override
-    protected Provider<Object> buildProvider(BeanResolutionContext resolutionContext, BeanContext context, Argument<Object> argument, Qualifier<Object> qualifier, boolean singleton) {
+    protected Provider<Object> buildProvider(
+            BeanResolutionContext resolutionContext,
+            BeanContext context,
+            Argument<Object> argument,
+            Supplier<Qualifier<Object>> qualifierSupplier,
+            boolean singleton) {
         if (singleton) {
 
             return new Provider<Object>() {
@@ -56,13 +63,13 @@ public final class JakartaProviderBeanDefinition extends AbstractProviderDefinit
                 @Override
                 public Object get() {
                     if (bean == null) {
-                        bean = ((DefaultBeanContext) context).getBean(resolutionContext, argument, qualifier);
+                        bean = ((DefaultBeanContext) context).getBean(resolutionContext, argument, qualifierSupplier.get());
                     }
                     return bean;
                 }
             };
         } else {
-            return () -> ((DefaultBeanContext) context).getBean(resolutionContext, argument, qualifier);
+            return () -> ((DefaultBeanContext) context).getBean(resolutionContext, argument, qualifierSupplier.get());
         }
     }
 

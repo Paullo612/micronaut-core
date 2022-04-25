@@ -23,12 +23,12 @@ import io.micronaut.core.annotation.AnnotationUtil;
 import io.micronaut.core.annotation.AnnotationValue;
 import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.annotation.NonNull;
-import io.micronaut.core.annotation.UsedByGeneratedCode;
-import io.micronaut.core.util.StringUtils;
-import jakarta.inject.Named;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.core.annotation.UsedByGeneratedCode;
 import io.micronaut.core.type.Argument;
 import io.micronaut.core.util.CollectionUtils;
+import io.micronaut.core.util.StringUtils;
+import jakarta.inject.Named;
 
 import java.lang.annotation.Annotation;
 import java.util.Collection;
@@ -207,6 +207,19 @@ public class Qualifiers {
     @UsedByGeneratedCode
     public static <T> Qualifier<T> byRepeatableAnnotation(AnnotationMetadata metadata, String repeatableType) {
         return new RepeatableAnnotationQualifier<>(metadata, repeatableType);
+    }
+
+    /**
+     * <p>Builds a qualifier that delegates to another qualifier built by factory specified by {@link io.micronaut.context.annotation.RuntimeQualified} annotation.</p>
+     *
+     * @param argument The argument
+     * @param <T>      The component type
+     * @return The qualifier
+     * @since 3.4.3
+     */
+    @UsedByGeneratedCode
+    public static <T> Qualifier<T> byRuntimeQualified(Argument<?> argument) {
+        return AbstractRuntimeQualifiedQualifier.create(argument);
     }
 
     /**

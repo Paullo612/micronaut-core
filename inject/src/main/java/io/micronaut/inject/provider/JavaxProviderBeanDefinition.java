@@ -23,6 +23,7 @@ import io.micronaut.core.annotation.Internal;
 import io.micronaut.core.type.Argument;
 
 import javax.inject.Provider;
+import java.util.function.Supplier;
 
 /**
  * Implementation for javax provider bean lookups.
@@ -54,7 +55,7 @@ public final class JavaxProviderBeanDefinition extends AbstractProviderDefinitio
             BeanResolutionContext resolutionContext,
             BeanContext context,
             Argument<Object> argument,
-            Qualifier<Object> qualifier,
+            Supplier<Qualifier<Object>> qualifierSupplier,
             boolean singleton) {
         if (singleton) {
             return new Provider<Object>() {
@@ -63,13 +64,13 @@ public final class JavaxProviderBeanDefinition extends AbstractProviderDefinitio
                 @Override
                 public Object get() {
                     if (bean == null) {
-                        bean = ((DefaultBeanContext) context).getBean(resolutionContext, argument, qualifier);
+                        bean = ((DefaultBeanContext) context).getBean(resolutionContext, argument, qualifierSupplier.get());
                     }
                     return bean;
                 }
             };
         } else {
-            return () -> ((DefaultBeanContext) context).getBean(resolutionContext, argument, qualifier);
+            return () -> ((DefaultBeanContext) context).getBean(resolutionContext, argument, qualifierSupplier.get());
         }
     }
 

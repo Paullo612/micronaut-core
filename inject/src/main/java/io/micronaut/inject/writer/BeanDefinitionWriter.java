@@ -40,6 +40,7 @@ import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.PropertySource;
 import io.micronaut.context.annotation.Provided;
 import io.micronaut.context.annotation.Requires;
+import io.micronaut.context.annotation.RuntimeQualified;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.core.annotation.AccessorsStyle;
 import io.micronaut.core.annotation.AnnotationMetadata;
@@ -456,6 +457,10 @@ public class BeanDefinitionWriter extends AbstractClassFileWriter implements Bea
     private static final org.objectweb.asm.commons.Method METHOD_QUALIFIER_BY_ANNOTATION =
             org.objectweb.asm.commons.Method.getMethod(
                     ReflectionUtils.getRequiredMethod(Qualifiers.class, "byAnnotationSimple", AnnotationMetadata.class, String.class)
+            );
+    private static final org.objectweb.asm.commons.Method METHOD_QUALIFIER_BY_RUNTIME_QUALIFIED =
+            org.objectweb.asm.commons.Method.getMethod(
+                    ReflectionUtils.getRequiredMethod(Qualifiers.class, "byRuntimeQualified", Argument.class)
             );
     private static final org.objectweb.asm.commons.Method METHOD_QUALIFIER_BY_REPEATABLE_ANNOTATION =
             org.objectweb.asm.commons.Method.getMethod(
@@ -2270,6 +2275,9 @@ public class BeanDefinitionWriter extends AbstractClassFileWriter implements Bea
                     "INSTANCE",
                     t
             );
+        } else if (element.hasDeclaredStereotype(RuntimeQualified.class)) {
+            resolveArgument.run();
+            generatorAdapter.invokeStatic(TYPE_QUALIFIERS, METHOD_QUALIFIER_BY_RUNTIME_QUALIFIED);
         } else {
             final String repeatableName = visitorContext
                     .getClassElement(annotationName)

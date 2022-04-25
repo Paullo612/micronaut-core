@@ -33,11 +33,13 @@ import io.micronaut.inject.BeanFactory;
 import io.micronaut.inject.InjectionPoint;
 import io.micronaut.inject.annotation.MutableAnnotationMetadata;
 import io.micronaut.inject.qualifiers.AnyQualifier;
+import io.micronaut.inject.qualifiers.LazyRuntimeQualifiedQualifier;
 import io.micronaut.inject.qualifiers.Qualifiers;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 /**
  * Abstract bean definition for other providers to extend from.
@@ -99,7 +101,7 @@ public abstract class AbstractProviderDefinition<T> implements BeanDefinition<T>
      * @param resolutionContext The resolution context
      * @param context The context
      * @param argument The argument
-     * @param qualifier The qualifier
+     * @param qualifierSupplier The qualifier supplier
      * @param singleton Whether the bean is a singleton
      * @return The provider
      */
@@ -107,7 +109,7 @@ public abstract class AbstractProviderDefinition<T> implements BeanDefinition<T>
             @NonNull BeanResolutionContext resolutionContext,
             @NonNull BeanContext context,
             @NonNull Argument<Object> argument,
-            @Nullable Qualifier<Object> qualifier,
+            @NonNull Supplier<Qualifier<Object>> qualifierSupplier,
             boolean singleton);
 
     @Override
@@ -139,13 +141,24 @@ public abstract class AbstractProviderDefinition<T> implements BeanDefinition<T>
                         }
                     }
 
-                    boolean hasBean = context.containsBean(argument, qualifier);
+                    boolean isLazyRuntimeQualifiedQualifier = qualifier instanceof LazyRuntimeQualifiedQualifier;
+                    final Supplier<Qualifier<Object>> qualifierSupplier;
+                    if (isLazyRuntimeQualifiedQualifier) {
+                        qualifierSupplier = ((LazyRuntimeQualifiedQualifier) qualifier)::createQualifier;
+                    } else {
+                        final Qualifier<Object> finalQualifier = qualifier;
+                        qualifierSupplier = () -> finalQualifier;
+                    }
+
+                    // LazyRuntimeQualifiedQualifier does not honor BeanContextConfiguration's isAllowEmptyProviders
+                    //  configuration flag, as its delegate is constructed at provider use time.
+                    boolean hasBean = isLazyRuntimeQualifiedQualifier || context.containsBean(argument, qualifier);
                     if (hasBean) {
                         return buildProvider(
                                 resolutionContext,
                                 context,
                                 argument,
-                                qualifier,
+                                qualifierSupplier,
                                 definition.isSingleton()
                         );
                     } else {
@@ -159,7 +172,7 @@ public abstract class AbstractProviderDefinition<T> implements BeanDefinition<T>
                                         resolutionContext,
                                         context,
                                         argument,
-                                        qualifier,
+                                        qualifierSupplier,
                                         definition.isSingleton()
                                 );
                             } else {
@@ -206,7 +219,7 @@ public abstract class AbstractProviderDefinition<T> implements BeanDefinition<T>
     @NonNull
     public final List<Argument<?>> getTypeArguments() {
         return Collections.singletonList(TYPE_VARIABLE);
-    }    
+    }
 
     @Override
     public AnnotationMetadata getAnnotationMetadata() {
